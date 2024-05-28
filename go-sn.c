@@ -1,4 +1,4 @@
-#define _GNU_SOURCE
+#define _GNU_SOURCE //enable the strcasestr function from string.h
 
 #include <stdio.h>
 #include <fcntl.h>
