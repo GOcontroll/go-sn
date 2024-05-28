@@ -52,6 +52,7 @@ int read_serial() {
 	}
 	buffer[SN_LEN] = 0; //add null terminator
 	printf("%s",buffer); //print the sn to stdout
+	close(disk);
 	return 0;
 }
 
@@ -68,7 +69,7 @@ int write_serial(char* sn) {
 		fprintf(stderr,"Could not write the serial number to memory:\n%s\n", strerror(errno));
 		return -1;
 	}
-
+	close(disk);
 	return 0;
 }
 
