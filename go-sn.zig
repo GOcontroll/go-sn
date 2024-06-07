@@ -25,9 +25,9 @@ pub fn main() !void {
         return error.InvalidArgument;
     };
 
-    if (std.mem.eql(u8, command, "read")) {
+    if (std.mem.containsAtLeast(u8, "read", 1, command)) {
         try read_sn();
-    } else if (std.mem.eql(u8, command, "write")) {
+    } else if (std.mem.containsAtLeast(u8, "write", 1, command)) {
         const sn = args.next() orelse {
             std.debug.print(usage, .{});
             return error.InvalidArgument;
