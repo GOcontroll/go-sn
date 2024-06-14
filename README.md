@@ -1,5 +1,5 @@
 # go-sn
-Utility for writing and reading serial numbers of controllers.
+Utility for writing and reading serial numbers of Moduline controllers.
 
 This utility works by writing a serial number to an area of eMMC memory that is not mapped by the filesystem, because of this it persists through reflashes.
 
@@ -9,4 +9,7 @@ zig build
 ```
 It will compile for the correct architecture and glibc version.
 
-When compiling with gcc make sure it doesn't link a glibc version greater than 2.31
+To switch between the zig version and the C version uncomment the .root_source_file line or the exe.addCSourceFile.  
+Whichever one is active is the version that gets built.
+
+When compiling the C version with gcc make sure it doesn't link a glibc version greater than 2.31.

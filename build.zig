@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .name = "go-sn",
         // .root_source_file = .{ .cwd_relative = "go-sn.zig" }, //the zig version of this program is a bit more than twice the size 6kb vs 14 kb
         .target = target,
-        .version = .{ .major = 1, .minor = 0, .patch = 0 },
+        .version = .{ .major = 1, .minor = 0, .patch = 1 },
         .optimize = .ReleaseSmall,
         .link_libc = true,
         .strip = true,

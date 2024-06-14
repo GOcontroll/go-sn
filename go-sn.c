@@ -13,13 +13,19 @@
 #define SN_LEN 19
 
 const char* usage =
-"GOcontroll serial number utility v1.0.0\n" 
+"GOcontroll serial number utility v1.0.1\n" 
 "Usage:\n"
 "go-sn [command] \'serial-number\'\n"
 "\n"
 "Available commands:\n"
-"read		Read the serial number from memory\n"
-"write		Write a serial number to memory\n";
+"[r]ead		Read the serial number from memory\n"
+"[w]rite		Write the 'serial-number' to memory\n"
+"\n"
+"'serial-number' must be a total of 19 characters long, and be segmented into 4 parts of 4 seperated by '-'\n"
+"\n"
+"Examples:\n"
+"go-sn read\n"
+"go-sn write 1234-5678-9012-3456\n";
 
 int get_disk() {
 	int disk;
@@ -51,7 +57,7 @@ int read_serial() {
 		return -1;
 	}
 	buffer[SN_LEN] = 0; //add null terminator
-	printf("%s",buffer); //print the sn to stdout
+	printf("%s\n",buffer); //print the sn to stdout
 	close(disk);
 	return 0;
 }
