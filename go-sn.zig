@@ -10,7 +10,7 @@ const usage =
     \\
     \\Available commands:
     \\read		Read the serial number from memory
-    \\write		Write the serialnumber to memory
+    \\write		Write the 'serial-number' to memory
     \\
 ;
 
@@ -18,16 +18,16 @@ pub fn main() !void {
     var args = std.process.args();
     if (!args.skip()) {
         std.debug.print(usage, .{});
-        return error.InvalidArgument;
+        return;
     }
     const command = args.next() orelse {
         std.debug.print(usage, .{});
-        return error.InvalidArgument;
+        return;
     };
 
-    if (std.mem.containsAtLeast(u8, "read", 1, command)) {
+    if (std.ascii.startsWithIgnoreCase("read", command)) {
         try read_sn();
-    } else if (std.mem.containsAtLeast(u8, "write", 1, command)) {
+    } else if (std.ascii.startsWithIgnoreCase("write", command)) {
         const sn = args.next() orelse {
             std.debug.print(usage, .{});
             return error.InvalidArgument;
@@ -39,7 +39,7 @@ pub fn main() !void {
         try write_sn(sn);
     } else {
         std.debug.print(usage, .{});
-        return error.InvalidArgument;
+        return;
     }
 }
 
