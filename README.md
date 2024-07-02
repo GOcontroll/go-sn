@@ -9,7 +9,6 @@ zig build
 ```
 It will compile for the correct architecture and glibc version.
 
-To switch between the zig version and the C version uncomment the .root_source_file line or the exe.addCSourceFile.  
-Whichever one is active is the version that gets built.
+To switch between the zig version and the C version use the `-Dbuild_type` option, use `zig build -h` for more info
 
 When compiling the C version with gcc make sure it doesn't link a glibc version greater than 2.31.

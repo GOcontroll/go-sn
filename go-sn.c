@@ -12,8 +12,15 @@
 #define BLOCK_SIZE 512
 #define SN_LEN 19
 
+#ifndef VERSION
+#error "VERSION must be passed in by command: -DVERSION=<version>"
+#endif
+
+#define stringify_(x) #x
+#define stringify(x) stringify_(x)
+
 const char* usage =
-"GOcontroll serial number utility v1.0.1\n" 
+"GOcontroll serial number utility v" stringify(VERSION) "\n" 
 "Usage:\n"
 "go-sn [command] \'serial-number\'\n"
 "\n"
@@ -33,23 +40,19 @@ int get_disk() {
 		fprintf(stderr, "Unable to open block device:\n%s\n", strerror(errno));
 		return -1;
 	}
-
 	if (lseek(disk, -BLOCK_SIZE, SEEK_END) < 0) {
 		close(disk);
 		fprintf(stderr, "Could not seek to serial number address:\n%s\n", strerror(errno));
 		return -1;
 	}
-
 	return disk;
 }
 
 int read_serial() {
 	int disk;
-	
 	if ((disk = get_disk()) < 0) {
 		return -1;
 	}
-
 	char buffer[SN_LEN+1]; //buffer with null terminator
 	if (read(disk, buffer, SN_LEN) < 0) {
 		close(disk);
@@ -67,7 +70,6 @@ int write_serial(char* sn) {
 	if ((disk = get_disk()) < 0) {
 		return -1;
 	}
-
 	char buffer[BLOCK_SIZE] = {0};
 	strncpy(buffer, sn, SN_LEN);
 	if (write(disk, buffer, BLOCK_SIZE) < 0) {
@@ -79,8 +81,7 @@ int write_serial(char* sn) {
 	return 0;
 }
 
-int main (int argc, char *argv[])
-{
+int main (int argc, char *argv[]) {
 	if (argc < 2) {
 		fprintf(stderr,"%s",usage);
 		return -1;

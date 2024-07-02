@@ -1,10 +1,11 @@
 const std = @import("std");
+const config = @import("config");
 
 const BLOCK_SIZE = 512;
 const SN_LEN = 19;
 
 const usage =
-    \\GOcontroll serial numer utility v1.0.1
+    \\GOcontroll serial numer utility v{s}
     \\Usage:
     \\go-sn [command] 'serial-number'
     \\
@@ -17,16 +18,17 @@ const usage =
     \\Examples:
     \\go-sn read
     \\go-sn write 1234-5678-9012-3456
+    \\
 ;
 
 pub fn main() !void {
     var args = std.process.args();
     if (!args.skip()) {
-        std.debug.print(usage, .{});
+        std.debug.print(usage, .{config.version});
         return error.InvalidArgument;
     }
     const command = args.next() orelse {
-        std.debug.print(usage, .{});
+        std.debug.print(usage, .{config.version});
         return error.InvalidArgument;
     };
 
@@ -34,12 +36,12 @@ pub fn main() !void {
         try read_sn();
     } else if (std.ascii.startsWithIgnoreCase("write", command)) {
         const sn = args.next() orelse {
-            std.debug.print(usage, .{});
+            std.debug.print(usage, .{config.version});
             return error.InvalidArgument;
         };
         try write_sn(sn);
     } else {
-        std.debug.print(usage, .{});
+        std.debug.print(usage, .{config.version});
         return error.InvalidArgument;
     }
 }
