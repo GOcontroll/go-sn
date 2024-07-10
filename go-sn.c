@@ -48,6 +48,24 @@ int get_disk() {
 	return disk;
 }
 
+int validate_serial(char* sn) {
+	if (strlen(sn) != SN_LEN) {
+		fprintf(stderr, "The serial number has to be 19 characters long.\n");
+		return -1;
+	}
+	for (int i = 0; i < SN_LEN; i++) {
+		if ((sn[i] == '-') && (((i+1) % 5) != 0)) { //check if every - is at the proper position
+			fprintf(stderr, "Each segment of the of the serial number should contain 4 characters\n");
+			return -1;
+		}
+		if ((sn[i] != '-') && (((i+1) % 5) == 0)) { //check if every - position contains a -
+			fprintf(stderr, "Each segment of the of the serial number should contain 4 characters\n");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 int read_serial() {
 	int disk;
 	if ((disk = get_disk()) < 0) {
@@ -56,16 +74,22 @@ int read_serial() {
 	char buffer[SN_LEN+1]; //buffer with null terminator
 	if (read(disk, buffer, SN_LEN) < 0) {
 		close(disk);
-		fprintf(stderr, "could not read the serial number:\n%s\n", strerror(errno));
+		fprintf(stderr, "Could not read the serial number:\n%s\n", strerror(errno));
 		return -1;
 	}
 	buffer[SN_LEN] = 0; //add null terminator
+	if (validate_serial(buffer)) {
+		return -1;
+	}
 	printf("%s\n",buffer); //print the sn to stdout
 	close(disk);
 	return 0;
 }
 
 int write_serial(char* sn) {
+	if (validate_serial(sn)) {
+		return -1;
+	}
 	int disk;
 	if ((disk = get_disk()) < 0) {
 		return -1;
@@ -84,7 +108,7 @@ int write_serial(char* sn) {
 int main (int argc, char *argv[]) {
 	if (argc < 2) {
 		fprintf(stderr,"%s",usage);
-		return -1;
+		return 0;
 	}
 	if (strcasestr("read", argv[1]) != NULL) {
 		return read_serial();

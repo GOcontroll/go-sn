@@ -5,7 +5,7 @@ const BuildType = enum {
     zig,
 };
 
-const version = "1.0.1";
+const version = "1.0.2";
 
 pub fn build(b: *std.Build) !void {
     const options = b.addOptions();

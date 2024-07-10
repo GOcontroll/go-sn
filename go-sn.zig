@@ -25,23 +25,23 @@ pub fn main() !void {
     var args = std.process.args();
     if (!args.skip()) {
         std.debug.print(usage, .{config.version});
-        return error.InvalidArgument;
+        return;
     }
     const command = args.next() orelse {
         std.debug.print(usage, .{config.version});
-        return error.InvalidArgument;
+        return;
     };
 
     if (std.ascii.startsWithIgnoreCase("read", command)) {
         try read_sn();
     } else if (std.ascii.startsWithIgnoreCase("write", command)) {
         const sn = args.next() orelse {
-            std.debug.print(usage, .{config.version});
+            std.log.err(usage, .{config.version});
             return error.InvalidArgument;
         };
         try write_sn(sn);
     } else {
-        std.debug.print(usage, .{config.version});
+        std.log.err(usage, .{config.version});
         return error.InvalidArgument;
     }
 }
@@ -52,10 +52,11 @@ fn read_sn() !void {
     var sn = [_]u8{0} ** 19;
     const bytes = try disk.read(&sn);
     if (bytes != 19) {
-        std.debug.print("Could not read full serial number, only {} bytes read.\n", .{bytes});
+        std.log.err("Could not read full serial number, only {} bytes read.\n", .{bytes});
         return error.IOError;
     }
-    const stdout_file = std.io.getStdOut().writer();
+    try validate_sn(&sn);
+    const stdout_file = std.io.getStdOut().writer(); //write actual result to stdout
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
     try stdout.print("{s}\n", .{sn});
@@ -63,22 +64,12 @@ fn read_sn() !void {
 }
 
 fn write_sn(sn: []const u8) !void {
-    if (sn.len != SN_LEN) {
-        std.debug.print("The serial number has to be 19 characters long.\n", .{});
-        return error.InvalidArgument;
-    }
-    var segments = std.mem.split(u8, sn, "-");
-    while (segments.next()) |segment| {
-        if (segment.len != 4) {
-            std.debug.print("Each segment of the of the serial number should contain 4 characters", .{});
-            return error.InvalidArgument;
-        }
-    }
+    try validate_sn(sn);
     const disk = try get_disk();
     defer disk.close();
     const bytes = try disk.write(sn);
     if (bytes != 19) {
-        std.debug.print("Could not write full serial number, only {} bytes written.\n", .{bytes});
+        std.log.err("Could not write full serial number, only {} bytes written.\n", .{bytes});
         return error.IOError;
     }
 }
@@ -87,4 +78,19 @@ fn get_disk() !std.fs.File {
     const disk = try std.fs.openFileAbsolute("/dev/mmcblk0", .{ .mode = .read_write });
     try disk.seekFromEnd(-BLOCK_SIZE);
     return disk;
+}
+
+fn validate_sn(sn: []const u8) !void {
+    if (sn.len != SN_LEN) {
+        std.log.err("The serial number has to be 19 characters long.\n", .{});
+        return error.InvalidArgument;
+    }
+
+    var segments = std.mem.split(u8, sn, "-");
+    while (segments.next()) |segment| {
+        if (segment.len != 4) {
+            std.log.err("Each segment of the of the serial number should contain 4 characters\n", .{});
+            return error.InvalidArgument;
+        }
+    }
 }
