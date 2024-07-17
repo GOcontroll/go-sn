@@ -53,7 +53,7 @@ int validate_serial(char* sn) {
 		fprintf(stderr, "The serial number has to be 19 characters long.\n");
 		return -1;
 	}
-	for (int i = 0; i < SN_LEN; i++) {
+	for (int i = 0; i < SN_LEN; i++) { // sn is already verified to be SN_LEN long
 		if ((sn[i] == '-') && (((i+1) % 5) != 0)) { //check if every - is at the proper position
 			fprintf(stderr, "Each segment of the of the serial number should contain 4 characters\n");
 			return -1;
@@ -72,9 +72,14 @@ int read_serial() {
 		return -1;
 	}
 	char buffer[SN_LEN+1]; //buffer with null terminator
-	if (read(disk, buffer, SN_LEN) < 0) {
+	ssize_t bytes;
+	if ((bytes = read(disk, buffer, SN_LEN)) < 0) {
 		close(disk);
 		fprintf(stderr, "Could not read the serial number:\n%s\n", strerror(errno));
+		return -1;
+	}
+	if (bytes != 19) {
+		fprintf(stderr, "Could not read full serial number, only %d bytes read.\n", bytes);
 		return -1;
 	}
 	buffer[SN_LEN] = 0; //add null terminator
