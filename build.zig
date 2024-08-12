@@ -10,7 +10,7 @@ const version = "1.0.2";
 pub fn build(b: *std.build.Builder) !void {
     const options = b.addOptions();
 
-    const build_type = b.option(BuildType, "build_type", "Whether to build the C or Zig version, default is C") orelse .c;
+    const build_type = b.option(BuildType, "build_type", "Whether to build the C or Zig version, default is Zig") orelse .zig;
     const target = b.standardTargetOptions(.{
         .default_target = .{
             .abi = .gnu,

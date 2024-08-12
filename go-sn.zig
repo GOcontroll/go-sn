@@ -85,7 +85,8 @@ fn validate_sn(sn: []const u8) !void {
         std.log.err("The serial number has to be 19 characters long.\n", .{});
         return error.InvalidArgument;
     }
-    var segments = std.mem.splitSequence(u8, sn, "-");
+    var segments = std.mem.split(u8, sn, "-");
+    //var segments = std.mem.splitSequence(u8, sn, "-");
     while (segments.next()) |segment| {
         if (segment.len != 4) {
             std.log.err("Each segment of the of the serial number should contain 4 characters\n", .{});
