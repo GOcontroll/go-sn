@@ -9,15 +9,20 @@ const version = "1.0.2";
 
 pub fn build(b: *std.Build) !void {
     const options = b.addOptions();
-
-    const build_type = b.option(BuildType, "build_type", "Whether to build the C or Zig version, default is Zig") orelse .zig;
-
-    const target = b.resolveTargetQuery(.{
+    const target = b.standardTargetOptions(.{ .default_target = .{
         .cpu_arch = .aarch64,
         .os_tag = .linux,
         .abi = .gnu,
         .glibc_version = .{ .major = 2, .minor = 31, .patch = 0 },
-    });
+    } });
+    const build_type = b.option(BuildType, "build_type", "Whether to build the C or Zig version, default is Zig") orelse .zig;
+
+    // const target = b.resolveTargetQuery(.{
+    //     .cpu_arch = .aarch64,
+    //     .os_tag = .linux,
+    //     .abi = .gnu,
+    //     .glibc_version = .{ .major = 2, .minor = 31, .patch = 0 },
+    // });
 
     const semver = try std.SemanticVersion.parse(version);
 
