@@ -35,7 +35,7 @@ pub fn build(b: *std.Build) !void {
                 .version = semver,
                 .optimize = .ReleaseSmall,
                 .link_libc = true,
-                .strip = true,
+                // .strip = true,
             });
             options.addOption([:0]const u8, "version", version); //add executable version to the "config" module
             exe.root_module.addOptions("config", options);
