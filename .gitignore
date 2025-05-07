@@ -1,4 +1,7 @@
 .vscode/
-zig-cache/
-zig-out/
-.zig-cache/
+debian/*
+!debian/rules
+!debian/changelog
+!debian/control
+!debian/copyright
+!debian/source

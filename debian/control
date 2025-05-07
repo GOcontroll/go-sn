@@ -1,0 +1,18 @@
+Source: go-sn
+Section: misc
+Priority: optional
+Maintainer: Maud Spierings <maudspierings@gocontroll.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+Standards-Version: 4.6.2
+Homepage: https://gocontroll.com
+Vcs-Browser: https://github.com/GOcontroll/go-sn
+Vcs-Git: https://github.com/GOcontroll/go-sn.git
+
+Package: go-sn
+Architecture: all
+Depends:
+ python3,
+ ${misc:Depends},
+Description: Utility for writing and reading serial numbers of Moduline controllers.
