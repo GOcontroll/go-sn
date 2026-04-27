@@ -1,7 +1,14 @@
 # go-sn
 Utility for writing and reading serial numbers of Moduline controllers.
 
-This utility works by writing a serial number to an area of eMMC memory that is not mapped by the filesystem, because of this it persists through reflashes.
+The serial number is stored in a dedicated GPT partition labelled `serial`
+(`/dev/disk/by-partlabel/serial`). The partition is created by the deploy
+tooling and is *not* touched by `gpt write` during a re-flash, so the SN
+persists through firmware updates.
+
+For backwards compatibility with units flashed before the serial partition
+was introduced, both read and write operations transparently fall back to
+the last sector of `/dev/mmcblk0` when the partition is not present.
 
 To compile with zig 0.12.0 or 0.13.0 run:
 ```sh

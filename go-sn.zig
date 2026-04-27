@@ -3,6 +3,8 @@ const config = @import("config");
 
 const BLOCK_SIZE = 512;
 const SN_LEN = 19;
+const SERIAL_PARTITION = "/dev/disk/by-partlabel/serial";
+const LEGACY_DEVICE = "/dev/mmcblk0";
 
 const usage =
     \\GOcontroll serial numer utility v{s}
@@ -14,6 +16,9 @@ const usage =
     \\[w]rite		Write the 'serial-number' to memory
     \\
     \\'serial-number' must be a total of 19 characters long, and be segmented into 4 parts of 4 seperated by '-'
+    \\
+    \\Storage: prefers GPT partition labelled 'serial' (modern firmware),
+    \\falls back to last sector of /dev/mmcblk0 (legacy units pre-serial-partition).
     \\
     \\Examples:
     \\go-sn read
@@ -47,37 +52,69 @@ pub fn main() !void {
 }
 
 fn read_sn() !void {
-    const disk = try get_disk();
-    defer disk.close();
-    var sn: [19]u8 = undefined;
-    const bytes = try disk.read(&sn);
-    if (bytes != 19) {
+    var sn: [SN_LEN]u8 = undefined;
+
+    // Try the dedicated GPT serial partition first.
+    if (std.fs.openFileAbsolute(SERIAL_PARTITION, .{ .mode = .read_only })) |f| {
+        defer f.close();
+        const bytes = try f.read(&sn);
+        if (bytes == SN_LEN) {
+            if (validate_sn(&sn)) |_| {
+                return print_sn(&sn);
+            } else |_| {
+                // Partition is present but contains no valid SN (freshly flashed
+                // unit, or migration-from-legacy). Fall through to legacy probe.
+            }
+        }
+    } else |err| {
+        if (err != error.FileNotFound) return err;
+    }
+
+    // Legacy fallback: last sector of /dev/mmcblk0 (pre-serial-partition firmware).
+    const f = try std.fs.openFileAbsolute(LEGACY_DEVICE, .{ .mode = .read_only });
+    defer f.close();
+    try f.seekFromEnd(-BLOCK_SIZE);
+    const bytes = try f.read(&sn);
+    if (bytes != SN_LEN) {
         std.log.err("Could not read full serial number, only {} bytes read.\n", .{bytes});
         return error.IOError;
     }
     try validate_sn(&sn);
-    const stdout_file = std.io.getStdOut().writer(); //write actual result to stdout
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-    try stdout.print("{s}\n", .{sn});
-    try bw.flush();
+    try print_sn(&sn);
 }
 
 fn write_sn(sn: []const u8) !void {
     try validate_sn(sn);
-    const disk = try get_disk();
-    defer disk.close();
-    const bytes = try disk.write(sn);
-    if (bytes != 19) {
-        std.log.err("Could not write full serial number, only {} bytes written.\n", .{bytes});
-        return error.IOError;
+
+    // Pad to a full sector with SN at offset 0, zeros after — block-device
+    // friendly (avoids partial-sector read-modify-write through the buffer cache).
+    var buffer = [_]u8{0} ** BLOCK_SIZE;
+    @memcpy(buffer[0..SN_LEN], sn);
+
+    // Prefer the dedicated GPT serial partition.
+    if (std.fs.openFileAbsolute(SERIAL_PARTITION, .{ .mode = .read_write })) |f| {
+        defer f.close();
+        try f.writeAll(&buffer);
+        return;
+    } else |err| {
+        if (err != error.FileNotFound) return err;
     }
+
+    // Legacy fallback: last sector of /dev/mmcblk0. Note: on modern firmware
+    // (with serial partition) this region is the GPT backup header — we never
+    // get here in that case because the partition open above succeeded.
+    const f = try std.fs.openFileAbsolute(LEGACY_DEVICE, .{ .mode = .read_write });
+    defer f.close();
+    try f.seekFromEnd(-BLOCK_SIZE);
+    try f.writeAll(&buffer);
 }
 
-fn get_disk() !std.fs.File {
-    const disk = try std.fs.openFileAbsolute("/dev/mmcblk0", .{ .mode = .read_write });
-    try disk.seekFromEnd(-BLOCK_SIZE);
-    return disk;
+fn print_sn(sn: []const u8) !void {
+    const stdout_file = std.io.getStdOut().writer();
+    var bw = std.io.bufferedWriter(stdout_file);
+    const stdout = bw.writer();
+    try stdout.print("{s}\n", .{sn});
+    try bw.flush();
 }
 
 fn validate_sn(sn: []const u8) !void {
