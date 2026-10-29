@@ -5,7 +5,10 @@ const BuildType = enum {
     zig,
 };
 
-const version = "1.1.0";
+fn build_version(b: *std.Build) []const u8 {
+    // CI passes -Dversion from the git tag, so the binary and the .deb agree.
+    return b.option([]const u8, "version", "Version string, default 1.1.1") orelse "1.1.1";
+}
 
 pub fn build(b: *std.Build) !void {
     const options = b.addOptions();
@@ -24,6 +27,7 @@ pub fn build(b: *std.Build) !void {
     //     .glibc_version = .{ .major = 2, .minor = 31, .patch = 0 },
     // });
 
+    const version = build_version(b);
     const semver = try std.SemanticVersion.parse(version);
 
     switch (build_type) {
@@ -37,7 +41,7 @@ pub fn build(b: *std.Build) !void {
                 .link_libc = true,
                 .strip = false,
             });
-            options.addOption([:0]const u8, "version", version); //add executable version to the "config" module
+            options.addOption([]const u8, "version", version); //add executable version to the "config" module
             exe.root_module.addOptions("config", options);
             b.installArtifact(exe);
         },

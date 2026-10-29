@@ -27,7 +27,7 @@ jobs:
           echo "${PWD}/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
 
       - name: Build
-        run: zig build -Dbuild_type=zig
+        run: zig build -Dbuild_type=zig -Dversion=${{ steps.version.outputs.version }}
 
       - name: Build .deb
         run: |

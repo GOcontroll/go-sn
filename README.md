@@ -8,7 +8,13 @@ persists through firmware updates.
 
 For backwards compatibility with units flashed before the serial partition
 was introduced, both read and write operations transparently fall back to
-the last sector of `/dev/mmcblk0` when the partition is not present.
+the last sector of `/dev/mmcblk0` when the partition is not present. When the
+partition exists it is the only place `go-sn read` looks: on a GPT-partitioned
+eMMC the last sector is the backup GPT header and never holds a serial number.
+
+An empty partition (all `0x00` or `0xff`) is reported as
+`No serial number programmed`, exit code 1. Program it with
+`go-sn write XXXX-XXXX-XXXX-XXXX`.
 
 To compile with zig 0.12.0 or 0.13.0 run:
 ```sh

@@ -18,7 +18,8 @@ const usage =
     \\'serial-number' must be a total of 19 characters long, and be segmented into 4 parts of 4 seperated by '-'
     \\
     \\Storage: prefers GPT partition labelled 'serial' (modern firmware),
-    \\falls back to last sector of /dev/mmcblk0 (legacy units pre-serial-partition).
+    \\falls back to the last sector of /dev/mmcblk0 only when that partition does
+    \\not exist (legacy units pre-serial-partition).
     \\
     \\Examples:
     \\go-sn read
@@ -52,20 +53,12 @@ pub fn main() !void {
 }
 
 fn read_sn() !void {
-    var sn: [SN_LEN]u8 = undefined;
-
-    // Try the dedicated GPT serial partition first.
+    // The dedicated GPT serial partition is authoritative when it exists. There
+    // is no fallback from it: with a GPT the last sector of /dev/mmcblk0 is the
+    // backup GPT header, so it can never hold a serial number on such a unit.
     if (std.fs.openFileAbsolute(SERIAL_PARTITION, .{ .mode = .read_only })) |f| {
         defer f.close();
-        const bytes = try f.read(&sn);
-        if (bytes == SN_LEN) {
-            if (validate_sn(&sn)) |_| {
-                return print_sn(&sn);
-            } else |_| {
-                // Partition is present but contains no valid SN (freshly flashed
-                // unit, or migration-from-legacy). Fall through to legacy probe.
-            }
-        }
+        return read_from(f, "partition 'serial'");
     } else |err| {
         if (err != error.FileNotFound) return err;
     }
@@ -74,13 +67,31 @@ fn read_sn() !void {
     const f = try std.fs.openFileAbsolute(LEGACY_DEVICE, .{ .mode = .read_only });
     defer f.close();
     try f.seekFromEnd(-BLOCK_SIZE);
-    const bytes = try f.read(&sn);
+    return read_from(f, "last sector of " ++ LEGACY_DEVICE);
+}
+
+fn read_from(f: std.fs.File, where: []const u8) !void {
+    var sn: [SN_LEN]u8 = undefined;
+    const bytes = try f.readAll(&sn);
     if (bytes != SN_LEN) {
         std.log.err("Could not read full serial number, only {} bytes read.\n", .{bytes});
         return error.IOError;
     }
+    if (is_blank(&sn)) {
+        // Not an invalid serial number but none at all: say so, once, and
+        // exit non-zero without the extra "error: ..." line of a returned error.
+        std.log.err("No serial number programmed ({s} is empty). Write one with: go-sn write XXXX-XXXX-XXXX-XXXX\n", .{where});
+        std.process.exit(1);
+    }
     try validate_sn(&sn);
     try print_sn(&sn);
+}
+
+fn is_blank(sn: []const u8) bool {
+    for (sn) |c| {
+        if (c != 0x00 and c != 0xff) return false;
+    }
+    return true;
 }
 
 fn write_sn(sn: []const u8) !void {

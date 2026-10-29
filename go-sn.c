@@ -33,7 +33,8 @@ const char* usage =
 "'serial-number' must be a total of 19 characters long, and be segmented into 4 parts of 4 seperated by '-'\n"
 "\n"
 "Storage: prefers GPT partition labelled 'serial' (modern firmware),\n"
-"falls back to last sector of /dev/mmcblk0 (legacy units pre-serial-partition).\n"
+"falls back to the last sector of /dev/mmcblk0 only when that partition does\n"
+"not exist (legacy units pre-serial-partition).\n"
 "\n"
 "Examples:\n"
 "go-sn read\n"
@@ -73,32 +74,34 @@ static int open_legacy(int flags) {
 	return disk;
 }
 
+static int is_blank(const char* sn) {
+	for (int i = 0; i < SN_LEN; i++) {
+		if ((unsigned char)sn[i] != 0x00 && (unsigned char)sn[i] != 0xff) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int read_serial() {
 	char buffer[SN_LEN+1]; //buffer with null terminator
+	const char* where = "partition 'serial'";
 
-	// Try the dedicated GPT serial partition first.
+	// The dedicated GPT serial partition is authoritative when it exists. There
+	// is no fallback from it: with a GPT the last sector of /dev/mmcblk0 is the
+	// backup GPT header, so it can never hold a serial number on such a unit.
 	int disk = open(SERIAL_PARTITION, O_RDONLY);
-	if (disk >= 0) {
-		ssize_t bytes = read(disk, buffer, SN_LEN);
-		close(disk);
-		if (bytes == SN_LEN) {
-			buffer[SN_LEN] = 0;
-			if (validate_serial(buffer) == 0) {
-				printf("%s\n", buffer);
-				return 0;
-			}
-			// Partition is present but contains no valid SN (freshly flashed
-			// unit, or migration-from-legacy). Fall through to legacy probe.
-		}
-	} else if (errno != ENOENT) {
-		fprintf(stderr, "Unable to open serial partition:\n%s\n", strerror(errno));
-		return -1;
-	}
-
-	// Legacy fallback.
-	disk = open_legacy(O_RDONLY);
 	if (disk < 0) {
-		return -1;
+		if (errno != ENOENT) {
+			fprintf(stderr, "Unable to open serial partition:\n%s\n", strerror(errno));
+			return -1;
+		}
+		// Legacy fallback: no serial partition (pre-serial-partition firmware).
+		disk = open_legacy(O_RDONLY);
+		if (disk < 0) {
+			return -1;
+		}
+		where = "last sector of " LEGACY_DEVICE;
 	}
 	ssize_t bytes = read(disk, buffer, SN_LEN);
 	close(disk);
@@ -109,6 +112,10 @@ int read_serial() {
 	if (bytes != SN_LEN) {
 		fprintf(stderr, "Could not read full serial number, only %zd bytes read.\n", bytes);
 		return -1;
+	}
+	if (is_blank(buffer)) {
+		fprintf(stderr, "No serial number programmed (%s is empty). Write one with: go-sn write XXXX-XXXX-XXXX-XXXX\n", where);
+		return 1;
 	}
 	buffer[SN_LEN] = 0;
 	if (validate_serial(buffer) != 0) {
